@@ -12,14 +12,12 @@ import java.util.List;
 
 @Service
 public class PolicyHandler {
-
     private DeliveryRepository deliveryRepository;
 
     @Autowired
     public PolicyHandler(DeliveryRepository deliveryRepository) {
         this.deliveryRepository = deliveryRepository;
     }
-
 
     @StreamListener(KafkaProcessor.INPUT)
     public void onListener(@Payload String message) {
@@ -29,14 +27,10 @@ public class PolicyHandler {
         OrderPlaced orderPlaced = null;
         try {
             orderPlaced = objectMapper.readValue(message, OrderPlaced.class);
-
-            System.out.println(" #### type = " + orderPlaced.getEventType());
-
             /**
              * 주문이 들어옴 -> 배송 시작 이벤트 발송
              */
-            if( orderPlaced.getEventType() != null && orderPlaced.getEventType().equals(OrderPlaced.class.getSimpleName())){
-
+            if( orderPlaced.isMe()){
                 Delivery delivery = new Delivery();
                 delivery.setOrderId(orderPlaced.getOrderId());
                 delivery.setQuantity(orderPlaced.getQuantity());
@@ -51,13 +45,11 @@ public class PolicyHandler {
             /**
              * 배송이 시작됨 -> 배송 완료 이벤트 발송
              */
-            }else if( orderPlaced.getEventType() != null && orderPlaced.getEventType().equals(DeliveryStarted.class.getSimpleName())){
-
+            }else if(new DeliveryStarted().isMe()){
                 DeliveryStarted deliveryStarted = objectMapper.readValue(message, DeliveryStarted.class);
-
                 Delivery delivery = deliveryRepository.findById(deliveryStarted.getDeliveryId()).get();
                 // TODO
-                // 메모리 DB 이고, 이벤트를 처음부터 무조건 받기 때문에, 생기는 문제로, 이미 취소된상태면 완료 이벤트를 발행하지 않는다
+                // 메모리 DB 이고, 이벤트를 처음부터 무조건 받기 때문에, 생기는 문제로, 이미 취소된상태면 완료 이벤트를 발행하지 않는다.
                 if( !DeliveryCancelled.class.getSimpleName().equals(delivery.getDeliveryState())) {
                     delivery.setDeliveryState(DeliveryCompleted.class.getSimpleName());
                     deliveryRepository.save(delivery);
@@ -68,11 +60,11 @@ public class PolicyHandler {
             /**
              * 주문이 취소됨 -> 배송 취소 이벤트 발송
              */
-            }else if( orderPlaced.getEventType().equals(OrderCancelled.class.getSimpleName())){
-                List<Delivery> deliverys = deliveryRepository.findByOrderIdOrderByDeliveryIdDesc(orderPlaced.getOrderId());
+            }else if( new OrderCancelled().isMe() ){
+                List<Delivery> deliveries = deliveryRepository.findByOrderIdOrderByDeliveryIdDesc(orderPlaced.getOrderId());
 
-                if( deliverys != null && deliverys.size() > 0 ){
-                    Delivery delivery = deliverys.get(0);
+                if( deliveries != null && deliveries.size() > 0 ){
+                    Delivery delivery = deliveries.get(0);
                     delivery.setDeliveryState(DeliveryCancelled.class.getSimpleName());
                     deliveryRepository.save(delivery);
 
