@@ -1,29 +1,28 @@
 package com.example.template;
 
 import com.example.template.config.kafka.KafkaProcessor;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.StreamListener;
-import org.springframework.core.env.Environment;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class DeliveryService {
+public class PolicyHandler {
+
+    private DeliveryRepository deliveryRepository;
 
     @Autowired
-    DeliveryRepository deliveryRepository;
+    public PolicyHandler(DeliveryRepository deliveryRepository) {
+        this.deliveryRepository = deliveryRepository;
+    }
+
 
     @StreamListener(KafkaProcessor.INPUT)
     public void onListener(@Payload String message) {
-        System.out.println("##### listener : " + message);
-
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
@@ -41,6 +40,7 @@ public class DeliveryService {
                 Delivery delivery = new Delivery();
                 delivery.setOrderId(orderPlaced.getOrderId());
                 delivery.setQuantity(orderPlaced.getQuantity());
+                delivery.setProductId(orderPlaced.getProductId());
                 delivery.setProductName(orderPlaced.getProductName());
                 delivery.setDeliveryAddress(orderPlaced.getCustomerAddr());
                 delivery.setCustomerId(orderPlaced.getCustomerId());

@@ -8,6 +8,15 @@ public class OrderPlaced  extends AbstractEvent {
     private String productName;
     private int quantity;
 
+    public long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(long productId) {
+        this.productId = productId;
+    }
+
+    private long productId;
     private String customerId;
     private String customerName;
     private String customerAddr;
